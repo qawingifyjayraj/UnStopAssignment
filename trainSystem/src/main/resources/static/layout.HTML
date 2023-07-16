@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Train Seat Reservation</title>
+    <style>
+        table {
+            border-collapse: collapse;
+        }
+
+        td {
+            width: 40px;
+            height: 40px;
+            text-align: center;
+            border: 1px solid black;
+        }
+
+        .available {
+            background-color: lightgreen;
+        }
+
+        .booked {
+            background-color: lightgray;
+        }
+
+        .reserved {
+            background-color: lightblue;
+        }
+
+        .error {
+            color: red;
+        }
+
+        .success {
+            color: green;
+        }
+    </style>
+</head>
+<body>
+    <h2>Train Seat Reservation</h2>
+
+    <div id="message" class=""></div>
+
+    <form id="reservationForm">
+        <label for="seatsToReserve">Number of Seats to Reserve:</label>
+        <input type="number" id="seatsToReserve" name="seatsToReserve" min="1" max="7">
+        <button type="submit">Reserve Seats</button>
+    </form>
+
+    <table id="seatLayout">
+        <tbody>
+            <tr>
+                <td class="booked"></td>
+                <td class="booked"></td>
+                <td class="booked"></td>
+                <td class="available"></td>
+                <td class="available"></td>
+                <td class="available"></td>
+                <td class="available"></td>
+            </tr>
+            <!-- More rows... -->
+        </tbody>
+    </table>
+
+    <script>
+        document.getElementById("reservationForm").addEventListener("submit", function(event) {
+            event.preventDefault();
+            
+            var seatsToReserve = parseInt(document.getElementById("seatsToReserve").value);
+            
+            if (isNaN(seatsToReserve) || seatsToReserve <= 0 || seatsToReserve > 7) {
+                showMessage("error", "Please enter a valid number of seats to reserve (1-7).");
+                return;
+            }
+            
+            reserveSeats(seatsToReserve);
+        });
+        
+        function reserveSeats(seatsToReserve) {
+            var xhr = new XMLHttpRequest();
+            
+            xhr.open("POST", "/seats/reserve?seatsToReserve=" + seatsToReserve, true);
+            
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    if (xhr.status === 200) {
+                        showMessage("success", xhr.responseText);
+                        refreshSeatLayout();
+                    } else {
+                        showMessage("error", xhr.responseText);
+                    }
+                }
+            };
+            
+            xhr.send();
+        }
+        
+        function refreshSeatLayout() {
+            var xhr = new XMLHttpRequest();
+            
+            xhr.open("GET", "/seats", true);
+            
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    if (xhr.status === 200) {
+                        updateSeatLayout(JSON.parse(xhr.responseText));
+                    } else {
+                        showMessage("error", "Failed to retrieve seat layout.");
+                    }
+                }
+            };
+            
+            xhr.send();
+        }
+        
+        function updateSeatLayout(seats) {
+            var table = document.getElementById("seatLayout");
+            
+            for (var i = 0; i < table.rows.length; i++) {
+                var row = table.rows[i];
+                
+                for (var j = 0; j < row.cells.length; j++) {
+                    var cell = row.cells[j];
+                    
+                    var seat = seats[i * row.cells.length + j];
+                    
+                    if (seat.status === 0) {
+                        cell.className = "available";
+                    } else if (seat.status === 1) {
+                        cell.className = "booked";
+                    } else if (seat.status === 2) {
+                        cell.className = "reserved";
+                    }
+                }
+            }
+        }
+        
+        function showMessage(type, message) {
+            var messageElement = document.getElementById("message");
+            messageElement.textContent = message;
+            messageElement.className = type;
+        }
+        
+        // Initial seat layout retrieval
+        refreshSeatLayout();
+    </script>
+</body>
+</html>
